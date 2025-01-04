@@ -4,7 +4,7 @@
 
 ## Demo
 
-Open Demo API: [Restify-devskills](https://restify-devskills.herokuapp.com/)
+Open Demo API: [Restify-devskills]([https://restify-devskills.herokuapp.com/](https://restify-devskills-ade2f2fd26de.herokuapp.com/)
 
 `$ GET` `/api/members`
 
@@ -32,7 +32,7 @@ Para poder utilizar los 2 endpoints anteriores debe obtener un token y enviarlo 
 ### Start API server
 
 -   Clonar este repositorio
--   `git clone https://github.com/domicoder/restify-restful-api.git`
+-   `git clone https://github.com/domicoder/devskills-api.git`
 -   Use NPM version (needs NVM)
 -   `nvm use`
 -   Instalar las dependencias
