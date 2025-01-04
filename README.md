@@ -4,7 +4,7 @@
 
 ## Demo
 
-Open Demo API: [Restify-devskills]([https://restify-devskills.herokuapp.com/](https://restify-devskills-ade2f2fd26de.herokuapp.com/))
+Open Demo API: [Restify-devskills](https://restify-devskills-ade2f2fd26de.herokuapp.com/)
 
 `$ GET` `/api/members`
 
