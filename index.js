@@ -6,7 +6,7 @@ const rjwt = require('restify-jwt-community');
 const jwt = require('jsonwebtoken');
 const user = require('./lib/user');
 const err = require('restify-errors');
-const server = Restify.createServer();
+const server = Restify.createServer({ onceNext: true });
 
 const corsMiddleware = require('restify-cors-middleware2');
 const cors = corsMiddleware({
@@ -19,37 +19,41 @@ const configJWK = {
     secret: process.env.RESTIFY_APP_JWT_SECRET,
 };
 
+// Middleware setup
 server.pre(cors.preflight);
 server.use(cors.actual);
-
 server.use(Restify.plugins.queryParser());
 server.use(Restify.plugins.bodyParser({ mapParams: false }));
 
+// JWT middleware
 server.use(
     rjwt(configJWK).unless({
         path: ['/auth'],
     })
 );
 
+// Route: GET /user
 server.get('/user', (req, res, next) => {
     res.send(req.user);
-    return next();
 });
 
+// Route: POST /auth
 server.post('/auth', (req, res, next) => {
-    let { username, password } = req.body;
+    const { username, password } = req.body;
+
+    console.log('Authenticating user...');
     user.authenticate(username, password)
         .then((data) => {
-            let token = jwt.sign(data, configJWK.secret, {
+            const token = jwt.sign(data, configJWK.secret, {
                 expiresIn: '15m',
             });
+            const { iat, exp } = jwt.decode(token);
 
-            let { iat, exp } = jwt.decode(token);
             res.send({ iat, exp, token });
-            return next();
+            console.log('Authentication successful');
         })
         .catch(() => {
-            return next(new err.UnauthorizedError('Invalid Credentials'));
+            next(new err.UnauthorizedError('Invalid Credentials'));
         });
 });
 
@@ -67,48 +71,56 @@ function validString(item) {
     return typeof item === 'string' && item.trim().length > 1;
 }
 
+// Route: GET /api/members
 server.get(url, (req, res, next) => {
+    console.log('GET /api/members');
     res.send(members);
-    return next();
 });
 
+// Route: POST /api/members
 server.post(url, (req, res, next) => {
-    const body = req.body || {};
-    const firstName = body.firstName || '';
-    const lastName = body.lastName || '';
-    const address = body.address || '';
-    const ssn = body.ssn || '';
-    if (
-        !validString(firstName) ||
-        !validString(lastName) ||
-        !validString(address)
-    ) {
-        return next(
-            new err.BadRequestError('Invalid first name, last name or address')
-        );
-    }
-    const regex = /^\d{3}-\d{2}-\d{4}$/;
-    if (regex.test(ssn) === false) {
-        return next(new err.BadRequestError('Invalid SSN'));
-    }
+    try {
+        const body = req.body || {};
+        const firstName = body.firstName || '';
+        const lastName = body.lastName || '';
+        const address = body.address || '';
+        const ssn = body.ssn || '';
 
-    const p = members.findIndex((m) => m.ssn === ssn);
-    if (p !== -1) {
-        return next(new err.BadRequestError('Duplicate SSN'));
+        if (
+            !validString(firstName) ||
+            !validString(lastName) ||
+            !validString(address)
+        ) {
+            throw new err.BadRequestError(
+                'Invalid first name, last name, or address'
+            );
+        }
+
+        const regex = /^\d{3}-\d{2}-\d{4}$/;
+        if (!regex.test(ssn)) {
+            throw new err.BadRequestError('Invalid SSN');
+        }
+
+        const duplicate = members.find((m) => m.ssn === ssn);
+        if (duplicate) {
+            throw new err.BadRequestError('Duplicate SSN');
+        }
+
+        const item = {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            address: address.trim(),
+            ssn,
+        };
+
+        members.push(item);
+        res.send(201, item);
+    } catch (error) {
+        next(error);
     }
-
-    const item = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        address: address.trim(),
-        ssn,
-    };
-
-    members.push(item);
-    res.send(201, item);
-    return next();
 });
 
+// Start server
 server.listen(process.env.PORT || 80, () => {
     console.log('%s listening at %s', server.name, server.url);
 });
